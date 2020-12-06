@@ -1,4 +1,7 @@
-  -- BallotReady data parsing address and pulling voterbase_id from communal data - using the same code that feeds the BR dashboard
+-- from The Movement Cooperative
+-- written by Melissa Woods
+
+-- BallotReady data parsing address and pulling voterbase_id from communal data - using the same code that feeds the BR dashboard
 with 
 
 base_info as (
