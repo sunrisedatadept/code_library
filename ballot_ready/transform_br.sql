@@ -1,3 +1,6 @@
+-- from The Movement Cooperative
+-- written by Melissa Woods
+
 with base_info as (
   select distinct session_id
   , last_value(case when right(upper(address),3)='USA' then upper(address) else NULL end ignore nulls) 
