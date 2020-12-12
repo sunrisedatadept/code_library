@@ -1,16 +1,16 @@
 -- all form responses
 WITH responses AS (
     SELECT
-        contacts_forms.contactsonlineformid,
-        contacts_forms.onlineformid,
-        contacts_forms.vanid,
-  		contacts_forms.submittedfirstname as firstname,
-    	contacts_forms.submittedlastname as lastname,
-		contacts_forms.submittedmobilephone as phone,
-		contacts_forms.submittedhomeemail as email,
-     	contacts_forms.submittedcity as city,
-     	contacts_forms.submittedstateprovince as state,
-		contacts_forms.submittedpostalcode as zip
+	contacts_forms.contactsonlineformid,
+	contacts_forms.onlineformid,
+	contacts_forms.vanid,
+	contacts_forms.submittedfirstname as firstname,
+	contacts_forms.submittedlastname as lastname,
+	contacts_forms.submittedmobilephone as phone,
+	contacts_forms.submittedhomeemail as email,
+	contacts_forms.submittedcity as city,
+	contacts_forms.submittedstateprovince as state,
+	contacts_forms.submittedpostalcode as zip
 
     FROM sunrise_ea.tsm_tmc_contactsonlineforms_sm AS contacts_forms
 
@@ -267,11 +267,11 @@ pivoted_responses AS (
         responses.vanid,
         responses.firstname,
         responses.lastname,
-  		responses.email,
-  		responses.phone,
-  		responses.city,
-  		responses.state,
-  		responses.zip,
+	responses.email,
+	responses.phone,
+	responses.city,
+	responses.state,
+	responses.zip,
         pivot_single.college,
         pivot_single.school_type,
         pivot_single.school_state,
