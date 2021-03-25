@@ -1,3 +1,7 @@
+// Credit to Evan Mceldowney for developing this Javascript
+// Copy and paste this code into your EveryAction Online Actions themes template
+// The code to rename race terms does not change the language in the backend
+
 <script>
      var alterGenderandRace = function(args) {
       // Removing unneeded gender types
