@@ -13,6 +13,7 @@ import time
 from urllib.parse import urljoin
 import urllib.request
 from datetime import datetime, timedelta
+from io import StringIO  
 
 #CIVIS enviro variables
 os.environ['REDSHIFT_PORT']
@@ -77,9 +78,7 @@ jobId = str(response.json().get('exportJobId'))
 ##### GET EXPORT JOB ##### 
 
 url = url + '/' + jobId
-response = requests.get(url, headers = headers, auth = auth)
 logger.info("Waiting for export")
-
 timeout = 300   # [seconds]
 timeout_start = time.time()
 
@@ -88,9 +87,6 @@ while time.time() < timeout_start + timeout:
 	try:
 		response = requests.get(url, headers = headers, auth = auth)
 		downloadLink = response.json().get('files')[0].get('downloadUrl')
-		if not os.path.exists('data'):
-		    os.makedirs('data')
-		urllib.request.urlretrieve(downloadLink, 'data/contacts.csv')
 		break
 	except:
 		logger.info("File not ready, trying again in 20 seconds")
@@ -99,7 +95,8 @@ while time.time() < timeout_start + timeout:
 logger.info("Export Job Complete")
 
 # Read in the data
-df = pd.read_csv('app/data/contacts.csv')
+downloadLink = response.json().get('files')[0].get('downloadUrl')
+df = pd.read_csv(downloadLink)
 logger.info(df.head())
 
 # Remove contacts that were not created in the last 15 min
