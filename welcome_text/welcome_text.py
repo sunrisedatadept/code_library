@@ -12,6 +12,7 @@ import logging
 import json 
 import time
 from urllib.parse import urljoin
+import urllib.request
 
 #Local enviro variables
 os.environ['REDSHIFT_PORT']
@@ -39,9 +40,7 @@ base_url = 'https://api.securevan.com/v4/'
 
 #########################################################################
 
-def download_file(response):
-	downloadLink = response.json().get('files')[0].get('downloadUrl')
-	return(urllib.request.urlretrieve(downloadLink, 'data/contacts.csv'))
+	
 
 
 ###################### REQUEST EXPORT JOB ###################################
@@ -62,15 +61,24 @@ recent_contacts = {
 
 print("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
+jobId = str(response.json().get('exportJobId'))
+
+###################### GET EXPORT JOB ################################### 
+
+url = url + '/' + jobId
+response = requests.get(url, headers = headers, auth = auth)
 print(response.text)
 print("Waiting for export")
-while True:
-    time.sleep(20) # twenty second delay
-    try:
-    	download_file(response)
-    	break
-    except:
-    	print ("File not ready, trying again in 20 seconds")
+print(response.status_code)
+while response.status_code != 201:
+	time.sleep(20) # twenty second delay
+	try:
+		response = requests.get(url, headers = headers, auth = auth)
+		downloadLink = response.json().get('files')[0].get('downloadUrl')
+		urllib.request.urlretrieve(downloadLink, 'data/contacts.csv')
+		break
+	except:
+		print ("File not ready, trying again in 20 seconds")
 
 ################### SEND TO STRIVE ################################
 print("Export Job Complete")
@@ -78,9 +86,10 @@ df = pd.read_csv('data/contacts.csv')
 print(df.head())
 
 
-#jobId = str(response.json().get('exportJobId'))
-
-###################### GET EXPORT JOB ################################### 
-
-#url = url + '/' + jobId
-# response = requests.get(url, headers = headers, auth = auth)
+# while response.json().get('jobStatus') == 'Pending':
+#     time.sleep(20) # twenty second delay
+#     try:
+#     	download_file(response)
+#     	break
+#     except:
+#     	print ("File not ready, trying again in 20 seconds")
