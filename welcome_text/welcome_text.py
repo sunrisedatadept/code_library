@@ -62,15 +62,9 @@ recent_contacts = {
 
 print("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
-jobId = str(response.json().get('exportJobId'))
-
-###################### GET EXPORT JOB ################################### 
-
-url = url + '/' + jobId
-response = requests.get(url, headers = headers, auth = auth)
 print(response.text)
 print("Waiting for export")
-while response.json().get('jobStatus') == 'Pending':
+while True:
     time.sleep(20) # twenty second delay
     try:
     	download_file(response)
@@ -82,3 +76,11 @@ while response.json().get('jobStatus') == 'Pending':
 print("Export Job Complete")
 df = pd.read_csv('data/contacts.csv')
 print(df.head())
+
+
+#jobId = str(response.json().get('exportJobId'))
+
+###################### GET EXPORT JOB ################################### 
+
+#url = url + '/' + jobId
+# response = requests.get(url, headers = headers, auth = auth)
