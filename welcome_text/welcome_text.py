@@ -1,6 +1,5 @@
 # load the necessary packages
 import pandas as pd
-import numpy as np
 import requests
 from requests.auth import HTTPBasicAuth
 import time
@@ -13,6 +12,8 @@ import json
 import time
 from urllib.parse import urljoin
 import urllib.request
+from datetime import datetime, timedelta
+
 
 #Local enviro variables
 os.environ['REDSHIFT_PORT']
@@ -38,9 +39,14 @@ headers = {"headers" : "application/json"}
 ## EA endpoint url
 base_url = 'https://api.securevan.com/v4/'
 
-#########################################################################
+########################## SET TIME ###############################
 
-	
+max_time = datetime.now()
+fifteen_minutes  = timedelta(minutes=15)
+min_time = max_time - fifteen_minutes
+
+max_time = max_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+min_time = min_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 ###################### REQUEST EXPORT JOB ###################################
@@ -51,8 +57,8 @@ job = "changedEntityExportJobs"
 url = urljoin(base_url, job)
 
 recent_contacts = {
-  "dateChangedFrom": 	"2021-03-10T01:02:03+04:00",
-  "dateChangedTo" : 	"2021-03-20T01:02:03+04:00",
+  "dateChangedFrom": 	min_time,
+  "dateChangedTo" : 	max_time,
   "resourceType": 		"Contacts",
   "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
 }
@@ -85,11 +91,3 @@ print("Export Job Complete")
 df = pd.read_csv('data/contacts.csv')
 print(df.head())
 
-
-# while response.json().get('jobStatus') == 'Pending':
-#     time.sleep(20) # twenty second delay
-#     try:
-#     	download_file(response)
-#     	break
-#     except:
-#     	print ("File not ready, trying again in 20 seconds")
