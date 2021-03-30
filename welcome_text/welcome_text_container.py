@@ -24,9 +24,7 @@ os.environ['S3_TEMP_BUCKET'] = 'parsons-tmc'
 os.environ['AWS_ACCESS_KEY_ID']
 os.environ['AWS_SECRET_ACCESS_KEY']
 van_key = os.environ['VAN_PASSWORD']
-
-# Initiate Redshift
-rs = Redshift()
+strive_key = os.environ['STRIVE_PASSWORD']
 
 # EA API credentials
 username = 'brittany'
@@ -35,13 +33,18 @@ password = van_key + '|' + dbMode
 auth = HTTPBasicAuth(username, password)
 headers = {"headers" : "application/json"}
 
-## EA endpoint url
-base_url = 'https://api.securevan.com/v4/'
+# Initiate Redshift
+rs = Redshift()
 
-## Strive API creds
-strive_key = os.environ['STRIVE_PASSWORD']
+##### Set up logger #####
+logger = logging.getLogger(__name__)
+_handler = logging.StreamHandler()
+_formatter = logging.Formatter('%(levelname)s %(message)s')
+_handler.setFormatter(_formatter)
+logger.addHandler(_handler)
+logger.setLevel('INFO')
 
-########################## SET TIME ###############################
+##### SET TIME #####
 
 max_time = datetime.now()
 fifteen_minutes  = timedelta(minutes=15)
@@ -51,10 +54,10 @@ max_time = max_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 min_time = min_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-###################### REQUEST EXPORT JOB ###################################
+##### REQUEST EXPORT JOB #####
 
-print("Starting Script")
-
+logger.info('Starting Script!')
+base_url = 'https://api.securevan.com/v4/'
 job = "changedEntityExportJobs"
 url = urljoin(base_url, job)
 
@@ -65,19 +68,22 @@ recent_contacts = {
   "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
 }
 
-###################### REQUEST EXPORT JOB ###################################
+##### REQUEST EXPORT JOB #####
 
-print("Initiate Export Job")
+logger.info("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
 jobId = str(response.json().get('exportJobId'))
 
-###################### GET EXPORT JOB ################################### 
+##### GET EXPORT JOB ##### 
 
 url = url + '/' + jobId
 response = requests.get(url, headers = headers, auth = auth)
-print("Waiting for export")
-print(response.text)
-while response.status_code != 201:
+logger.info("Waiting for export")
+
+timeout = 300   # [seconds]
+timeout_start = time.time()
+
+while time.time() < timeout_start + timeout:
 	time.sleep(20) # twenty second delay
 	try:
 		response = requests.get(url, headers = headers, auth = auth)
@@ -87,35 +93,34 @@ while response.status_code != 201:
 		urllib.request.urlretrieve(downloadLink, 'data/contacts.csv')
 		break
 	except:
-		print ("File not ready, trying again in 20 seconds")
+		logger.info("File not ready, trying again in 20 seconds")
 
-################### CLEAN DATA ################################
-print("Export Job Complete")
+##### CLEAN DATA #####
+logger.info("Export Job Complete")
 
 # Read in the data
-df = pd.read_csv('data/contacts.csv')
-print(df.head())
+df = pd.read_csv('app/data/contacts.csv')
+logger.info(df.head())
 
 # Remove contacts that were not created in the last 15 min
 df['DateCreated']= pd.to_datetime(df['DateCreated'])
 df_filtered = df.loc[df['DateCreated'].between(min_time, max_time)]
 
-################### SEND NEW CONTACTS TO REDSHIFT ################################
-
-new_contacts_table = Table.from_dataframe(df_filtered)
-# copy Table into Redshift, append new rows
-rs.copy(new_contacts_table, 'sunrise.new_contacts_summary' ,if_exists='append', distkey='vanid', sortkey = None, alter_table = True)
-
-################### SEND TO STRIVE ################################
+##### SEND TO STRIVE #####
 # Opted in = 3, Unknown = 2
 df_for_strive = df_filtered.loc[df_filtered['PhoneOptInStatus'] == 3]
 df_for_strive = df_for_strive[["VanID", "FirstName", "LastName", "Phone"]]
 
 url = "https://api.strivedigital.org/"
+df_filtered.to_csv('data/sample_data.csv')
 
 if len(df_for_strive) != 0:
-	print("Let's welcome these bad boys")
+	logger.info("Let's welcome these bad boys")
+	logger.info("Logging new contacts in Redshift")
+	new_contacts_table = Table.from_dataframe(df_filtered)
+	# copy Table into Redshift, append new rows
+	rs.copy(new_contacts_table, 'sunrise.new_contacts_summary' ,if_exists='append', distkey='vanid', sortkey = None, alter_table = True)
 
 
 else:
-	print("No new contacts in the last 15 minutes")
+	logger.info("No new contacts in the last 15 minutes")
