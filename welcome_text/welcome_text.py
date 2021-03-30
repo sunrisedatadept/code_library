@@ -24,9 +24,6 @@ os.environ['AWS_ACCESS_KEY_ID']
 os.environ['AWS_SECRET_ACCESS_KEY']
 van_key = os.environ['VAN_API_KEY']
 
-# Parsons
-print("Starting Script")
-
 # Initiate Redshift
 rs = Redshift()
 
@@ -48,6 +45,9 @@ def download_file(response):
 
 
 ###################### REQUEST EXPORT JOB ###################################
+
+print("Starting Script")
+
 job = "changedEntityExportJobs"
 url = urljoin(base_url, job)
 
@@ -59,21 +59,26 @@ recent_contacts = {
 }
 
 ###################### REQUEST EXPORT JOB ###################################
-print("Initiate Export Job")
 
+print("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
 jobId = str(response.json().get('exportJobId'))
 
 ###################### GET EXPORT JOB ################################### 
+
 url = url + '/' + jobId
 response = requests.get(url, headers = headers, auth = auth)
 print(response.text)
+print("Waiting for export")
 while response.json().get('jobStatus') == 'Pending':
-    time.sleep(60) # sixty second delay
+    time.sleep(20) # twenty second delay
     try:
     	download_file(response)
-    except Error:
-    	print ("File not ready, trying again in one minute")
+    	break
+    except:
+    	print ("File not ready, trying again in 20 seconds")
 
-
-
+################### SEND TO STRIVE ################################
+print("Export Job Complete")
+df = pd.read_csv('data/contacts.csv')
+print(df.head())
