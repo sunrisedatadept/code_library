@@ -51,8 +51,8 @@ max_time = datetime.now()
 fifteen_minutes  = timedelta(minutes=15)
 min_time = max_time - fifteen_minutes
 
-max_time = max_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-min_time = min_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+max_time_string = max_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+min_time_string = min_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 ##### REQUEST EXPORT JOB #####
@@ -63,8 +63,8 @@ job = "changedEntityExportJobs"
 url = urljoin(base_url, job)
 
 recent_contacts = {
-  "dateChangedFrom": 	min_time,
-  "dateChangedTo" : 	max_time,
+  "dateChangedFrom": 	min_time_string,
+  "dateChangedTo" : 	max_time_string,
   "resourceType": 		"Contacts",
   "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
 }
@@ -74,6 +74,8 @@ recent_contacts = {
 logger.info("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
 jobId = str(response.json().get('exportJobId'))
+logger.info(jobId)
+logger.info(response.text)
 
 ##### GET EXPORT JOB ##### 
 
@@ -91,13 +93,13 @@ while time.time() < timeout_start + timeout:
 	except:
 		logger.info("File not ready, trying again in 20 seconds")
 
-##### CLEAN DATA #####
-logger.info("Export Job Complete")
+else:
+	logger.info("Export Job Complete")
 
+##### CLEAN DATA #####
 # Read in the data
-downloadLink = response.json().get('files')[0].get('downloadUrl')
 df = pd.read_csv(downloadLink)
-logger.info(df.head())
+logger.info(f"Found, {len(df)}, modified contacts. Checking if created in the last 15 minutes.")
 
 # Remove contacts that were not created in the last 15 min
 df['DateCreated']= pd.to_datetime(df['DateCreated'])
@@ -109,7 +111,6 @@ df_for_strive = df_filtered.loc[df_filtered['PhoneOptInStatus'] == 3]
 df_for_strive = df_for_strive[["VanID", "FirstName", "LastName", "Phone"]]
 
 url = "https://api.strivedigital.org/"
-df_filtered.to_csv('data/sample_data.csv')
 
 if len(df_for_strive) != 0:
 	logger.info("Let's welcome these bad boys")
