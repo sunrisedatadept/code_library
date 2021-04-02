@@ -16,16 +16,9 @@ from datetime import datetime, timedelta
 from io import StringIO  
 
 #CIVIS enviro variables
-os.environ['REDSHIFT_PORT']
-os.environ['REDSHIFT_DB'] = os.environ['REDSHIFT_DATABASE']
-os.environ['REDSHIFT_HOST']
-os.environ['REDSHIFT_USERNAME'] = os.environ['REDSHIFT_CREDENTIAL_USERNAME']
-os.environ['REDSHIFT_PASSWORD'] = os.environ['REDSHIFT_CREDENTIAL_PASSWORD']
-os.environ['S3_TEMP_BUCKET'] = 'parsons-tmc'
-os.environ['AWS_ACCESS_KEY_ID']
-os.environ['AWS_SECRET_ACCESS_KEY']
 van_key = os.environ['VAN_PASSWORD']
 strive_key = os.environ['STRIVE_PASSWORD']
+campaign_id = os.environ['STRIVE_CAMPAIGN_ID']
 
 # EA API credentials
 username = 'brittany'
@@ -33,9 +26,6 @@ dbMode = '1'
 password = van_key + '|' + dbMode
 auth = HTTPBasicAuth(username, password)
 headers = {"headers" : "application/json"}
-
-# Initiate Redshift
-rs = Redshift()
 
 ##### Set up logger #####
 logger = logging.getLogger(__name__)
@@ -66,7 +56,7 @@ recent_contacts = {
   "dateChangedFrom": 	min_time_string,
   "dateChangedTo" : 	max_time_string,
   "resourceType": 		"Contacts",
-  "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
+  "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated"]
 }
 
 ##### REQUEST EXPORT JOB #####
@@ -74,14 +64,12 @@ recent_contacts = {
 logger.info("Initiate Export Job")
 response = requests.post(url, json = recent_contacts, headers = headers, auth = auth, stream = True)
 jobId = str(response.json().get('exportJobId'))
-logger.info(jobId)
-logger.info(response.text)
 
 ##### GET EXPORT JOB ##### 
 
 url = url + '/' + jobId
 logger.info("Waiting for export")
-timeout = 300   # [seconds]
+timeout = 1000   # [seconds]
 timeout_start = time.time()
 
 while time.time() < timeout_start + timeout:
@@ -99,26 +87,53 @@ else:
 ##### CLEAN DATA #####
 # Read in the data
 df = pd.read_csv(downloadLink)
-logger.info(f"Found, {len(df)}, modified contacts. Checking if created in the last 15 minutes.")
+logger.info(f"Found, {len(df)}, modified contacts. Checking if created today.")
 
-# Remove contacts that were not created in the last 15 min
+# Filter for contacts that were created today
+# EveryAction returns a date, not a datetime, for DateCreated
+# Relying on Strive's dedupe upsert logic to not text people twice
 df['DateCreated']= pd.to_datetime(df['DateCreated'])
-df_filtered = df.loc[df['DateCreated'].between(min_time, max_time)]
+df_filtered = df.loc[df['DateCreated'] ==  datetime.now().date()]
 
-##### SEND TO STRIVE #####
-# Opted in = 3, Unknown = 2
+logger.info(f"Found, {len(df_filtered)}, new contacts. Checking if they are opted in.")
+
 df_for_strive = df_filtered.loc[df_filtered['PhoneOptInStatus'] == 3]
 df_for_strive = df_for_strive[["VanID", "FirstName", "LastName", "Phone"]]
 
+logger.info(f"Found, {len(df_for_strive)}, opted in contacts. Sending to Strive.")
+
+##### SEND TO STRIVE #####
+
 url = "https://api.strivedigital.org/"
+df.to_csv('data/sample_data.csv')
+
+headers = {
+  'Content-Type': 'application/json',
+  'Authorization': 'Bearer ' + strive_key
+}
 
 if len(df_for_strive) != 0:
-	logger.info("Let's welcome these bad boys")
-	logger.info("Logging new contacts in Redshift")
-	new_contacts_table = Table.from_dataframe(df_filtered)
-	# copy Table into Redshift, append new rows
-	rs.copy(new_contacts_table, 'sunrise.new_contacts_summary' ,if_exists='append', distkey='vanid', sortkey = None, alter_table = True)
+	logger.info("New folk to welcome! Let's send to Strive. They'll handle any deduping.")
+	
+	for person in len(df_for_strive):
+			phone_number = df_for_strive['Phone']
+			vanid = df_for_strive['VanID']
+			first_name = df_for_strive['FirstName']
+			last_name = df_for_strive['LastName']
+			payload = {
+				    "phone_number": phone_number,
+				    "campaign_id": campaign_id,
+				    "first_name": first_name,
+				    "last_name": last_name,
+				    "opt_in": True
+				}
 
-
+		response = requests.request("POST", 'https://api.strivedigital.org/members', headers=headers, data=json.dumps(payload))
+		if response.status_code = 201:
+			logger.info(f"Successfully added, {first_name}, {last_name}")
+		else:
+			logger.info(f"Error, {response.status_code}")
+	
 else:
-	logger.info("No new contacts in the last 15 minutes")
+	logger.info("No contacts to send to Strive.")
+
