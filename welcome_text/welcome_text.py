@@ -44,7 +44,7 @@ url = urljoin(base_url, job)
 recent_contacts = {
   "dateChangedFrom": 	min_time,
   "dateChangedTo" : 	max_time,
-  "resourceType": 	"Contacts",
+  "resourceType": 		"Contacts",
   "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
 }
 
@@ -92,7 +92,7 @@ df_filtered = df.loc[df['DateCreated'] ==  datetime.now().date()]
 df_for_strive = df_filtered.loc[df_filtered['PhoneOptInStatus'] == 3]
 df_for_strive = df_for_strive[["VanID", "FirstName", "LastName", "Phone"]]
 
- ##### SEND TO STRIVE #####
+##### SEND TO STRIVE #####
 
 url = "https://api.strivedigital.org/"
 df.to_csv('data/sample_data.csv')
