@@ -52,7 +52,7 @@ url = urljoin(base_url, job)
 recent_contacts = {
   "dateChangedFrom": 	min_time,
   "dateChangedTo" : 	max_time,
-  "resourceType": 		"Contacts",
+  "resourceType": 	"Contacts",
   "requestedFields": 	["VanID", "FirstName", "LastName", "Phone", "PhoneOptInStatus", "DateCreated" ]
 }
 
