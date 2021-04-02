@@ -15,14 +15,6 @@ from datetime import datetime, timedelta
 import sys
 
 #Local enviro variables
-os.environ['REDSHIFT_PORT']
-os.environ['REDSHIFT_DB']
-os.environ['REDSHIFT_HOST']
-os.environ['REDSHIFT_USERNAME']
-os.environ['REDSHIFT_PASSWORD']
-os.environ['S3_TEMP_BUCKET']
-os.environ['AWS_ACCESS_KEY_ID']
-os.environ['AWS_SECRET_ACCESS_KEY']
 van_key = os.environ['VAN_API_KEY']
 strive_key = os.environ['STRIVE_KEY']
 campaign_id = os.environ['STRIVE_CAMPAIGN_ID']
