@@ -107,7 +107,6 @@ if len(df_for_strive) != 0:
 	
 	for person in len(df_for_strive):
 			phone_number = df_for_strive['Phone']
-			vanid = df_for_strive['VanID']
 			first_name = df_for_strive['FirstName']
 			last_name = df_for_strive['LastName']
 			payload = {
@@ -118,11 +117,11 @@ if len(df_for_strive) != 0:
 				    "opt_in": True
 				}
 
-		response = requests.request("POST", 'https://api.strivedigital.org/members', headers=headers, data=json.dumps(payload))
-		if response.status_code = 201:
-			print(f"Successfully added, {first_name}, {last_name}")
-		else:
-			print(f"Error, {response.status_code}")
+			response = requests.request("POST", 'https://api.strivedigital.org/members', headers=headers, data=json.dumps(payload))
+			if response.status_code == 201:
+				print(f"Successfully added, {first_name}, {last_name}")
+			else:
+				print(f"Error, {response.status_code}")
 	
 else:
 	print("No contacts to send to Strive.")
